@@ -1,0 +1,5 @@
+  torch
+  sentencepiece
+  sacrebleu
+  datasets
+  gradio
