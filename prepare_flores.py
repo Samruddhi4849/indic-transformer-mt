@@ -3,6 +3,10 @@ from pathlib import Path
 
 DATA = Path("data")
 tar_path = DATA / "flores200.tar.gz"
+import urllib.request
+URL = "https://dl.fbaipublicfiles.com/nllb/flores200_dataset.tar.gz"
+if not tar_path.exists():
+    urllib.request.urlretrieve(URL, tar_path)
 langs = {"eng_Latn": "en", "hin_Deva": "hi", "mar_Deva": "mr"}
 
 with tarfile.open(tar_path) as tar:
