@@ -1,18 +1,19 @@
 import tarfile
+import urllib.request
 from pathlib import Path
 
 DATA = Path("data")
-tar_path = DATA / "flores200.tar.gz"
-import urllib.request
+DATA.mkdir(exist_ok=True)
 URL = "https://dl.fbaipublicfiles.com/nllb/flores200_dataset.tar.gz"
-if not tar_path.exists():
-    urllib.request.urlretrieve(URL, tar_path)
+tar_path = DATA / "flores200.tar.gz"
 langs = {"eng_Latn": "en", "hin_Deva": "hi", "mar_Deva": "mr"}
+
+if not tar_path.exists():
+    print("Downloading FLORES-200 ...")
+    urllib.request.urlretrieve(URL, tar_path)
 
 with tarfile.open(tar_path) as tar:
     names = tar.getnames()
-    print("First 8 entries in archive:", names[:8])
-
     for split in ["dev", "devtest"]:
         for code, short in langs.items():
             suffix = f"/{split}/{code}.{split}"
