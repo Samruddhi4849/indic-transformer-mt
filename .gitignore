@@ -8,3 +8,5 @@
   *.model
   .ipynb_checkpoints/
   checkpoints/
+  logs/overfit.csv
+  logs/summary.csv
