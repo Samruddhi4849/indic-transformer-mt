@@ -18,10 +18,12 @@ ap.add_argument("--alpha", type=float, default=0.6)
 ap.add_argument("--max_len", type=int, default=100)
 ap.add_argument("--n", type=int, default=0, help="only the first N sentences (quick test)")
 ap.add_argument("--ckpt", default="checkpoints/best.pt")
+ap.add_argument("--spm", default="data/spm.model")
+ap.add_argument("--tag", default="")
 args = ap.parse_args()
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-sp = spm.SentencePieceProcessor(model_file="data/spm.model")
+sp = spm.SentencePieceProcessor(model_file=args.spm)
 
 ckpt = torch.load(args.ckpt, map_location=device)
 cfg = ckpt["cfg"]
@@ -46,7 +48,7 @@ for i, line in enumerate(src_lines, 1):
 
 bleu = sacrebleu.corpus_bleu(hyps, [refs])
 chrf = sacrebleu.corpus_chrf(hyps, [refs], word_order=2)     # word_order=2 -> chrF++
-print(f"\nsplit={args.split} beam={args.beam} alpha={args.alpha} sentences={len(hyps)}")
+print(f"\ntag={args.tag} split={args.split} beam={args.beam} alpha={args.alpha} sentences={len(hyps)}")
 print(bleu)
 print(chrf)
 try:
@@ -56,13 +58,14 @@ except Exception:
     spbleu = float("nan")
 
 Path("results").mkdir(exist_ok=True)
-Path(f"results/hyp.{args.split}.hi").write_text("\n".join(hyps) + "\n", encoding="utf-8")
+name = f"{args.tag}.{args.split}" if args.tag else args.split
+Path(f"results/hyp.{name}.hi").write_text("\n".join(hyps) + "\n", encoding="utf-8")
 new = not Path("results/results.csv").exists()
 with open("results/results.csv", "a", newline="") as f:
     w = csv.writer(f)
     if new:
-        w.writerow(["split", "beam", "alpha", "n", "bleu", "chrf++", "spbleu"])
-    w.writerow([args.split, args.beam, args.alpha, len(hyps),
+        w.writerow(["tag", "split", "beam", "alpha", "n", "bleu", "chrf++", "spbleu"])
+    w.writerow([args.tag, args.split, args.beam, args.alpha, len(hyps),
                 f"{bleu.score:.2f}", f"{chrf.score:.2f}", f"{spbleu:.2f}"])
 
 print("\nFirst 3 examples:")
