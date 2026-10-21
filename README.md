@@ -1,283 +1,400 @@
-# 🇮🇳 Low-Resource Indian Language Translation Using Transformers
+# 🇮🇳 Low-Resource English-to-Hindi Translation Using a Transformer From Scratch
 
-A deep learning project focused on improving **English-to-Marathi machine translation** under limited training data conditions using a Transformer model implemented from scratch in PyTorch.
+**A PyTorch implementation of the Transformer architecture from “Attention Is All You Need,” investigating data efficiency in low-resource English-to-Hindi machine translation.**
 
-The project investigates how training data size, multilingual transfer learning, and back-translation affect translation quality for low-resource Indian languages.
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-Deep%20Learning-ee4c2c)](https://pytorch.org/)
+[![NLP](https://img.shields.io/badge/Domain-NLP-purple)](https://en.wikipedia.org/wiki/Natural_language_processing)
+[![Status](https://img.shields.io/badge/Status-Experiments%20In%20Progress-orange)](.)
 
-## 📌 Project Overview
+## 📌 Overview
 
-Machine translation between English and Indian languages remains challenging because of limited parallel training data, differences in sentence structure, and rich linguistic morphology.
+Machine translation between English and Indian languages remains challenging because of limited parallel training data, differences in grammatical structure, and language-specific vocabulary.
 
-This project explores these challenges by building a Transformer-based neural machine translation model and comparing its performance with pretrained translation models.
+This project implements the Transformer architecture from scratch in PyTorch and studies how the amount of training data affects English-to-Hindi translation quality.
 
-Rather than focusing only on translation accuracy, the project studies how models behave when training data is limited and analyzes common translation errors.
+Inspired by the paper *Attention Is All You Need*, the project uses a compact Transformer model trained on the IITB English-Hindi parallel corpus. Its performance is evaluated on FLORES-200 and compared with a pretrained translation baseline.
+
+The main research question is:
+
+> **How does the amount of parallel training data affect the translation quality of a Transformer trained from scratch, and how does it compare with a pretrained model?**
+
+The project emphasizes reproducible experiments, quantitative evaluation, and honest analysis of model limitations rather than attempting to reproduce the original paper's benchmark scores.
 
 ## 🎯 Objectives
 
-- Implement the Transformer architecture from scratch using PyTorch.
-- Develop an English-to-Marathi translation model.
-- Measure performance with different training dataset sizes.
-- Compare the custom model against pretrained translation models.
-- Investigate back-translation and multilingual training.
-- Analyze word-order differences between English and Marathi.
-- Evaluate translations using BLEU and chrF++ scores.
-- Build an interactive translation demo using Gradio.
+- Implement the core Transformer architecture from scratch using PyTorch.
+- Study data efficiency across six training-set sizes, from 5,000 to 200,000 sentence pairs.
+- Compare the custom Transformer with a pretrained translation model.
+- Evaluate translation quality using BLEU, chrF++, and spBLEU.
+- Investigate English SVO to Hindi SOV word-order reordering.
+- Analyze attention patterns and common translation errors.
+- Publish reproducible training scripts, evaluation results, and an interactive Gradio demo.
 
-## 🧠 Key Features
+## 🧠 Model Architecture
 
-### 1. Transformer from Scratch
-Implement the core Transformer components, including:
+The model follows the encoder-decoder Transformer architecture described in *Attention Is All You Need*.
 
-- Encoder and decoder layers
-- Multi-head self-attention
-- Positional encoding
-- Feed-forward neural networks
+### Implemented components
+
+- Scaled dot-product attention
+- Multi-head attention
+- Padding masks and causal masks
+- Sinusoidal positional encoding
+- Position-wise feed-forward networks
+- Encoder and decoder stacks
 - Residual connections and layer normalization
-- Masking and autoregressive decoding
+- Shared source/target token embeddings and output projection weights
+- Embedding scaling by √d_model
+- Autoregressive decoding with greedy and beam search
 
-### 2. Data-Efficiency Experiments
+Standard PyTorch building blocks such as `nn.Linear`, `nn.Embedding`, and `nn.LayerNorm` are used. The Transformer architecture and its attention computations are implemented by the project rather than delegated to a pretrained Transformer model.
 
-Train and evaluate the model using different amounts of parallel training data.
+### Configuration
 
-| Training data | Purpose |
+| Parameter | Original Transformer Base | This Project |
+|---|---:|---:|
+| Encoder layers | 6 | 3 |
+| Decoder layers | 6 | 3 |
+| Model dimension | 512 | 256 |
+| Attention heads | 8 | 4 |
+| Feed-forward dimension | 2048 | 1024 |
+| Dropout | 0.1 | 0.3 |
+| Learning-rate warmup | 4,000 steps | 800 steps |
+| Shared vocabulary | Approximately 37K | 8K |
+| Tokenizer | BPE | SentencePiece BPE |
+
+The compact configuration is designed to make experiments practical on a free Kaggle T4 GPU. It is a scaled-down implementation of the architecture, not an exact reproduction of the original model's capacity or training compute.
+
+## 📚 Dataset and Preprocessing
+
+### Training dataset
+
+**IITB English-Hindi Parallel Corpus**
+
+The corpus contains approximately 1.66 million English-Hindi sentence pairs. The project uses cleaned subsets of this corpus for training.
+
+### Data preprocessing
+
+The preprocessing pipeline applies the following steps:
+
+1. Remove empty sentence pairs.
+2. Filter sentences longer than 80 words.
+3. Remove sentence pairs with length ratios outside 0.4–2.5.
+4. Filter Hindi sentences that do not meet the project's Devanagari-script requirement.
+5. Remove duplicate pairs.
+6. Shuffle the cleaned dataset and create nested training subsets.
+
+Each training subset is a prefix of the same shuffled dataset, allowing the effect of training-set size to be studied while keeping the data selection process consistent.
+
+### Tokenization
+
+A shared SentencePiece BPE tokenizer is trained for English and Hindi.
+
+- Vocabulary size: 8,000 tokens
+- Shared vocabulary for both languages
+- Reserved token IDs for padding, unknown, beginning-of-sequence, and end-of-sequence tokens
+
+**Important:** Every model checkpoint must be paired with the exact SentencePiece model used during its training. A tokenizer-checkpoint mismatch can produce severely degraded translations.
+
+## ⚙️ Training Methodology
+
+The training pipeline incorporates the following techniques:
+
+- Adam optimizer with β₁ = 0.9, β₂ = 0.98, and ε = 1e-9
+- Transformer learning-rate warmup schedule
+- Label smoothing of 0.1
+- Token-budget batching
+- Dropout of 0.3
+- Early stopping after five epochs without validation-loss improvement
+- Validation-based checkpoint selection
+
+Training runs are designed for a free Kaggle T4 GPU, with logs and checkpoints saved for each dataset size.
+
+The pilot experiment uses approximately 18.7K cleaned training pairs. The full data-efficiency experiment is in progress.
+
+## 📊 Data-Efficiency Experiment
+
+The central experiment measures translation quality as the training dataset grows.
+
+| Experiment | Training sentence pairs | Status |
+|---|---:|---|
+| Run 1 | 5,000 | In progress |
+| Run 2 | 10,000 | In progress |
+| Run 3 | 20,000 | In progress |
+| Run 4 | 50,000 | In progress |
+| Run 5 | 100,000 | In progress |
+| Run 6 | 200,000 | In progress |
+
+*Individual runs should be marked complete only after their final checkpoints and evaluation results have been saved.*
+
+### Experimental controls
+
+The following are held constant across runs:
+
+- Model architecture and hyperparameters
+- Tokenizer and vocabulary
+- Learning-rate schedule
+- Validation set of 500 sentence pairs
+- Data ordering, using nested prefixes of one shuffled file
+
+The primary variable is the number of training sentence pairs.
+
+The resulting data-efficiency curve will help show how quickly the model learns from additional data and whether improvements diminish as the dataset grows.
+
+## 📏 Evaluation Metrics
+
+The model is evaluated using the FLORES-200 English-Hindi benchmark.
+
+| Metric | Purpose |
 |---|---|
-| 5,000 sentence pairs | Study extremely limited-data performance |
-| 20,000 sentence pairs | Measure early learning improvements |
-| 100,000 sentence pairs | Evaluate medium-scale training |
-| 500,000 sentence pairs | Investigate performance at a larger scale |
+| BLEU | Measures n-gram overlap between generated and reference translations |
+| chrF++ | Measures character-level and word-level overlap |
+| spBLEU | Uses multilingual tokenization for more comparable evaluation |
+| Validation loss | Tracks prediction error on held-out training-domain data |
+| Perplexity | Expresses the model's predictive uncertainty through exponentiated loss |
 
-The actual dataset sizes will depend on data availability and computational resources.
+### Evaluation protocol
 
-### 3. Low-Resource Improvement Techniques
+- **FLORES dev:** Used for development, validation of decoding choices, and intermediate evaluation.
+- **FLORES devtest:** Reserved for final reporting and evaluated once after development decisions are complete.
+- **Pilot evaluation:** The initial scores were calculated on only the first 100 sentences of the dev split and are not directly comparable to full-split results.
 
-**Back-translation:** Use monolingual Marathi text to generate synthetic training pairs and investigate whether additional data improves translation quality.
+The final report will distinguish pilot measurements from full-split evaluation results.
 
-**Multilingual training:** Train on English-Hindi and English-Marathi data with language tags to study whether related-language information benefits Marathi translation.
+## 📈 Current Pilot Results
 
-**Pretrained baseline comparison:** Compare the custom Transformer with an appropriate pretrained model, such as IndicTrans2 or MarianMT, where supported.
+The initial pilot run used approximately 18.7K cleaned training pairs.
 
-### 4. Linguistic Error Analysis
+| Metric | Pilot result |
+|---|---:|
+| Best validation loss | Approximately 4.56 |
+| Perplexity | Approximately 96 |
+| BLEU, first 100 dev sentences | 0.46 |
+| chrF++, same 100 sentences | 10.36 |
+| spBLEU, same 100 sentences | 0.49 |
+| Output/reference length ratio | 0.938 |
+| Beam search, beam size 4 | Not yet measured |
 
-Analyze common translation errors, including:
+**Interpretation:** The pilot model has learned some target-language patterns, but its translation quality remains very weak. Its outputs can be fluent Hindi without accurately preserving the English input's meaning.
 
-- Subject-verb-object (SVO) to subject-object-verb (SOV) reordering
-- Gender agreement
-- Postposition usage
-- Honorifics and formality
-- Rare words and vocabulary limitations
+Validation loss reached its minimum near epoch 36 while training loss continued to decline, suggesting overfitting after that point.
 
-Attention visualizations will be used to investigate how the model aligns source words with translated words.
+These measurements are preliminary. The 100-sentence sample is too small to establish reliable benchmark performance, and the scores must not be presented as final FLORES-200 results.
 
-### 5. Translation Evaluation
+## 🔬 Planned Research Extensions
 
-Evaluate translation quality using:
+### 1. Pretrained baseline comparison
 
-- **BLEU:** Measures n-gram overlap between generated and reference translations.
-- **chrF++:** Evaluates character-level and word-level overlap, useful for examining morphological variations.
-- **FLORES-200:** A multilingual evaluation benchmark for comparable translation testing, subject to the selected language direction and split availability.
+Compare the from-scratch model against a suitable pretrained English-to-Hindi translation model, such as MarianMT or IndicTrans2, where a compatible model and evaluation setup are available.
 
-Results will be reported using actual experimental measurements rather than assumed improvements.
+Both models should be evaluated on the same FLORES sentences with consistent reference translations and metric settings.
 
-### 6. Interactive Demo
+The comparison will quantify the performance gap and help explain the advantages of pretrained linguistic knowledge.
 
-Build a Gradio web interface where users can:
+### 2. Low-resource training technique
+
+Investigate at least one approach for improving translation with limited parallel data:
+
+- **Back-translation:** Generate synthetic English-Hindi training pairs using monolingual Hindi text.
+- **Multilingual training:** Investigate whether training with another Indian language can improve Hindi translation.
+
+Any improvement will be reported using measured scores. Negative results will also be documented.
+
+### 3. Attention visualization and error analysis
+
+Inspect attention heatmaps to investigate how the decoder aligns English source words with Hindi output tokens.
+
+Manually analyze approximately 100 translated sentences and categorize errors such as:
+
+- Subject-object-verb reordering
+- Incorrect grammatical agreement
+- Missing or incorrect postpositions
+- Incorrect handling of names and rare words
+- Hallucinated content and loss of source meaning
+
+Attention weights are diagnostic visualizations, not definitive proof that the model has learned a particular linguistic rule.
+
+### 4. Gradio demo
+
+Develop a simple interactive interface that allows users to:
 
 1. Enter an English sentence.
-2. Generate a Marathi translation.
-3. Compare outputs from available models.
-4. Explore examples of translation errors.
+2. Generate a Hindi translation.
+3. View the output from the trained model.
+4. Compare results with a pretrained baseline, if integrated.
+5. Inspect selected examples of translation errors.
 
-## 🛠️ Tech Stack
+## 🧪 Testing
 
-- **Language:** Python
-- **Deep Learning:** PyTorch
-- **NLP:** Hugging Face Transformers, SentencePiece
-- **Evaluation:** SacreBLEU, chrF++
-- **Visualization:** Matplotlib, Seaborn (optional)
-- **Demo:** Gradio
-- **Development:** Jupyter Notebook / Google Colab / VS Code
-- **Version Control:** Git and GitHub
+The implementation currently has **23 passing tests**, covering implemented model and training components.
 
-## 📂 Project Structure
+Testing focuses on verifying:
+
+- Attention output shapes and masking behavior
+- Encoder and decoder tensor dimensions
+- Positional encoding
+- Padding and causal masking
+- Forward-pass behavior
+- Training and loss calculations
+- Decoding behavior
+- Tokenizer and checkpoint compatibility
+
+Tests validate implementation behavior; passing tests alone do not establish translation quality.
+
+## 📂 Repository Structure
+
+The following is a suggested logical structure. Update the paths to match the actual repository files.
 
 ```text
-low-resource-indian-translation/
-│
+low-resource-en-hi-transformer/
 ├── data/
 │   ├── raw/
 │   ├── processed/
 │   └── README.md
-│
+├── tokenizer/
+│   ├── train_tokenizer.py
+│   └── spm.model
 ├── models/
-│   ├── transformer.py
+│   ├── attention.py
+│   ├── positional_encoding.py
 │   ├── encoder.py
 │   ├── decoder.py
-│   └── attention.py
-│
-├── tokenizer/
-│   └── train_tokenizer.py
-│
+│   └── transformer.py
 ├── training/
 │   ├── train.py
-│   ├── back_translation.py
-│   └── multilingual_training.py
-│
+│   └── scheduler.py
 ├── evaluation/
 │   ├── evaluate.py
 │   ├── error_analysis.py
 │   └── visualize_attention.py
-│
+├── tests/
+│   └── ...
+├── experiments/
+│   ├── results.csv
+│   └── plots/
 ├── app.py
 ├── requirements.txt
-├── README.md
-└── .gitignore
+├── .gitignore
+└── README.md
 ```
 
-*This is a proposed structure; adjust the folders to match your actual implementation.*
+Large datasets and model checkpoints should not be committed directly to Git unless the repository is specifically configured to host them. Document how to obtain required artifacts.
 
-## ⚙️ Installation
+## 🚀 Setup and Usage
 
-### 1. Clone the repository
+### Prerequisites
+
+- Python
+- PyTorch
+- SentencePiece
+- SacreBLEU
+- NumPy
+- A GPU runtime for practical training at larger dataset sizes
+
+### Installation
+
+Clone the repository:
 
 ```bash
-git clone https://github.com/Samruddhi4849/low-resource-indian-translation.git
-cd low-resource-indian-translation
+git clone https://github.com/Samruddhi4849/YOUR_REPOSITORY.git
+cd YOUR_REPOSITORY
 ```
 
-### 2. Create a virtual environment
+Create and activate a virtual environment:
 
 ```bash
 python -m venv venv
 ```
 
-Activate it on Windows:
+Windows:
 
 ```bash
 venv\Scripts\activate
 ```
 
-### 3. Install dependencies
-
-Create a `requirements.txt` file with the libraries required by your implementation, for example:
-
-```text
-torch
-numpy
-pandas
-matplotlib
-sentencepiece
-transformers
-datasets
-sacrebleu
-gradio
-```
-
-Install them using:
+Install the project dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-For GPU training, install a PyTorch build compatible with your CUDA environment, if available.
+### Training and evaluation
 
-## 🚀 Usage
-
-The exact commands will depend on the scripts implemented in the repository.
-
-### Train the Transformer
+Use the actual script names and arguments from the repository. A typical workflow is:
 
 ```bash
 python training/train.py
-```
-
-### Evaluate translation quality
-
-```bash
 python evaluation/evaluate.py
-```
-
-### Launch the Gradio demo
-
-```bash
 python app.py
 ```
 
-These commands are intended as a starting point and should be updated to match the actual filenames and command-line arguments in your project.
+These commands are illustrative and should be adjusted to match the implemented entry points. Training requires the preprocessed dataset and the matching tokenizer artifacts.
 
-## 📊 Experimental Plan
+For full experiments, follow the repository's Kaggle notebook instructions and use the saved checkpoints and logs for reproducibility.
 
-The project will investigate the following research questions:
+## ⚠️ Risks and Limitations
 
-| Experiment | Research question |
-|---|---|
-| Data efficiency | How does translation quality change as training data increases? |
-| Pretrained baseline | How does a from-scratch model compare with pretrained models? |
-| Back-translation | Does synthetic parallel data improve Marathi translation? |
-| Multilingual transfer | Can Hindi training data help English-to-Marathi translation? |
-| Linguistic analysis | Which types of grammatical and word-order errors occur most often? |
+- **Limited compute:** The compact model is trained with significantly less compute than the original Transformer Base.
+- **Small-data overfitting:** A model trained on a limited number of sentence pairs may memorize patterns without learning reliable translation.
+- **Domain mismatch:** IITB training text and FLORES evaluation text differ in domain and style.
+- **Tokenizer limitations:** The shared tokenizer was trained using a limited sample and may be suboptimal for larger training subsets.
+- **Runtime interruptions:** Kaggle session limits can interrupt training; checkpoints and logs should be saved regularly.
+- **Slow decoding:** CPU inference can be slow, especially for beam search.
+- **Experimental variability:** A single run per dataset size may produce a noisy data-efficiency curve.
+- **Evaluation leakage:** The devtest split must not be used to tune hyperparameters or select the best checkpoint.
 
-### Results
+The objective is to understand the behavior and limitations of a small from-scratch model, not to claim production-level translation performance.
 
-Results will be added after experiments are completed.
+## 🗺️ Project Roadmap
 
-| Model / experiment | Training data | BLEU | chrF++ |
-|---|---:|---:|---:|
-| Transformer from scratch | 5K pairs | TBD | TBD |
-| Transformer from scratch | 20K pairs | TBD | TBD |
-| Transformer from scratch | 100K pairs | TBD | TBD |
-| Transformer from scratch | 500K pairs | TBD | TBD |
-| Transformer + back-translation | TBD | TBD | TBD |
-| Multilingual Transformer | TBD | TBD | TBD |
-| Pretrained baseline | Model-dependent | TBD | TBD |
+- [x] Implement the core Transformer architecture
+- [x] Implement the training pipeline
+- [x] Implement greedy and beam-search decoding
+- [x] Add BLEU and chrF++ evaluation
+- [x] Pass 23 implementation tests
+- [x] Complete the initial pilot run
+- [ ] Complete all six data-efficiency runs
+- [ ] Evaluate a pretrained baseline on the same test sentences
+- [ ] Investigate one low-resource training technique
+- [ ] Complete attention visualization and manual error analysis
+- [ ] Finalize FLORES devtest results
+- [ ] Build the Gradio demo
+- [ ] Publish final plots, tables, and reproduction instructions
 
-*All TBD values must be replaced with measured results. Ensure every model is evaluated on a consistent test set before comparing scores.*
+## 📚 References
 
-## 🔬 Linguistic Analysis
-
-English commonly follows SVO word order, while Marathi commonly follows SOV word order.
-
-For example:
-
-- **English:** I eat an apple.
-- **Marathi:** मी सफरचंद खातो.
-
-A translation model must learn to reorder words while preserving meaning and grammatical agreement.
-
-The project will examine attention visualizations and manually inspect approximately 100 translated sentences to identify recurring errors and opportunities for improvement.
-
-## 🌱 Future Improvements
-
-- Compare BPE and SentencePiece unigram tokenization.
-- Investigate romanized Marathi and code-mixed input.
-- Test translation across government, news, and conversational domains.
-- Explore COMET evaluation where suitable models and resources are available.
-- Improve inference speed and deploy the demo publicly.
-
-## 📈 Expected Outcomes
-
-- A working Transformer implementation built from scratch.
-- An experimental comparison across different data sizes.
-- An evaluation of back-translation and multilingual training.
-- Quantitative translation metrics and qualitative error analysis.
-- An interactive English-to-Marathi translation demo.
-
-The expected outcomes are research goals, not guaranteed performance improvements.
+1. Vaswani, A. et al. (2017). [Attention Is All You Need](https://arxiv.org/abs/1706.03762).
+2. [IIT Bombay English-Hindi Parallel Corpus](https://www.cfilt.iitb.ac.in/iitb_parallel/).
+3. [FLORES-200: A Multilingual Evaluation Benchmark](https://github.com/facebookresearch/flores).
+4. [PyTorch Documentation](https://pytorch.org/docs/stable/index.html).
+5. [SentencePiece](https://github.com/google/sentencepiece).
+6. [SacreBLEU](https://github.com/mjpost/sacrebleu).
 
 ## 👩‍💻 Author
 
 **Samruddhi Shinde**
 
-Third-Year Information Technology Student
+B.Tech — Information Technology
 
-**Interests:** Artificial Intelligence, Natural Language Processing, Deep Learning, and Machine Translation.
+Project area: Natural Language Processing, Neural Machine Translation, Deep Learning, and Transformer Architectures.
 
 ## 📄 License
 
-This project may be released under the MIT License. Add a `LICENSE` file before claiming that the repository is MIT-licensed.
+This project's source code is licensed under the [MIT License](LICENSE).
 
-## 🙌 Acknowledgements
+Copyright (c) 2026 Samruddhi Shinde
 
-- PyTorch
-- Hugging Face
-- FLORES-200 multilingual evaluation benchmark
-- Research and open-source contributions to neural machine translation for Indian languages
+The MIT License applies to the project's code and does not automatically apply to third-party datasets, pretrained models, or other external resources.
+
+### Dataset Licenses
+
+- **IITB English-Hindi Parallel Corpus:** Subject to the dataset's original terms of use, including any non-commercial research restrictions.
+- **FLORES-200:** Subject to its applicable license and usage conditions. Please refer to the [official FLORES repository](https://github.com/facebookresearch/flores) for details.
+
+Users are responsible for complying with the applicable licenses and usage restrictions of all third-party resources.
+
+
+---
+
+*This project is an educational and experimental implementation. Final benchmark results, pretrained-model comparisons, and claimed improvements will be added only after the corresponding experiments are completed.*
