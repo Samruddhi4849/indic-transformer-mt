@@ -1,0 +1,23 @@
+# Indic Transformer MT
+
+English to Hindi translation with a Transformer implemented from scratch in PyTorch, following "Attention Is All You Need" (Vaswani et al., 2017).
+
+## Implemented
+- Scaled dot-product and multi-head attention, padding and causal masks
+- Sinusoidal positional encoding, encoder and decoder stacks, shared embeddings
+- Adam with the paper's warmup schedule, label smoothing, token-budget batching
+- Greedy and beam search decoding; SacreBLEU and chrF++ evaluation on FLORES-200
+- 23 unit tests (`uv run pytest -v`)
+
+## Pilot baseline (18.7K sentence pairs, small model)
+| Metric | Result |
+|---|---|
+| Best validation loss | about 4.56 (perplexity about 96) |
+| BLEU / chrF++ (greedy, first 100 FLORES dev sentences) | 0.46 / 10.36 |
+
+A near-zero BLEU is expected at this data size. The project studies how quality changes with more data.
+
+## Status
+In progress: data-efficiency experiment, pretrained baseline, error analysis.
+
+Data: IITB English-Hindi (non-commercial research use) and FLORES-200. Datasets are downloaded by the scripts and are not stored in this repo.
